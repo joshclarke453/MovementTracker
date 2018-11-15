@@ -7,9 +7,14 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
+#import <CoreMotion/CMMotionManager.h>
 
-@interface ViewController : UIViewController
+#define SERVICE_TYPE @"mt-4768"
+#define FILTERNO     0
+#define FILTERLOW    1
+#define FILTERHIGH   2
 
+@interface ViewController : UIViewController <MCSessionDelegate, MCBrowserViewControllerDelegate>
 
 @end
-
