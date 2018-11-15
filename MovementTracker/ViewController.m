@@ -21,24 +21,12 @@
 @property (strong, nonatomic) NSTimer *timer;
 @property (weak, nonatomic) IBOutlet UIBarButtonItem *browseButton;
 @property (weak, nonatomic) IBOutlet UIBarButtonItem *disconnectButton;
-@property (weak, nonatomic) IBOutlet UILabel *xLabel;
-@property (weak, nonatomic) IBOutlet UILabel *yLabel;
-@property (weak, nonatomic) IBOutlet UILabel *zLabel;
-@property (weak, nonatomic) IBOutlet UILabel *pitchLabel;
-@property (weak, nonatomic) IBOutlet UILabel *rollLabel;
-@property (weak, nonatomic) IBOutlet UILabel *yawLabel;
-@property (weak, nonatomic) IBOutlet UIView *xNeg;
 @property (weak, nonatomic) IBOutlet UIView *xPos;
-@property (weak, nonatomic) IBOutlet UIView *yNeg;
 @property (weak, nonatomic) IBOutlet UIView *yPos;
-@property (weak, nonatomic) IBOutlet UIView *zNeg;
 @property (weak, nonatomic) IBOutlet UIView *zPos;
 @property (weak, nonatomic) IBOutlet UIView *rollPos;
 @property (weak, nonatomic) IBOutlet UIView *pitchPos;
 @property (weak, nonatomic) IBOutlet UIView *yawPos;
-@property (weak, nonatomic) IBOutlet UIView *pitchNeg;
-@property (weak, nonatomic) IBOutlet UIView *rollNeg;
-@property (weak, nonatomic) IBOutlet UIView *yawNeg;
 @property (weak, nonatomic) IBOutlet UILabel *statusLabel;
 @property (strong, nonatomic) MCSession *session;
 @property (strong, nonatomic) MCAdvertiserAssistant *assistant;
@@ -54,6 +42,7 @@
     [super viewDidLoad];
     [self startMonitoringMotion];
     connected = NO;
+    [self setUIToNotConnectedState];
     originalViewFrame = self.view.frame;
     [self prepareSession];
     [self startAdvertising];
@@ -98,29 +87,28 @@
 - (void)pollMotion:(NSTimer *)timer {
     CMAcceleration acc = self.motman.accelerometerData.acceleration;
     CMRotationRate rot = self.motman.gyroData.rotationRate;
-    NSArray* rots = [NSArray arrayWithObjects:[NSNumber numberWithDouble:rot.x],[NSNumber numberWithDouble:rot.y],[NSNumber numberWithDouble:rot.z], nil];
+    NSArray* rots = [NSArray arrayWithObjects:[NSNumber numberWithFloat:rot.x],[NSNumber numberWithFloat:rot.y],[NSNumber numberWithFloat:rot.z], nil];
     NSArray* rotViews = [NSArray arrayWithObjects:self.pitchPos, self.rollPos, self.yawPos, nil];
     [self addAcceleration:acc];
-    NSArray* nf = [NSArray arrayWithObjects:[NSNumber numberWithDouble:acc.x],[NSNumber numberWithDouble:acc.y],[NSNumber numberWithDouble:acc.z], nil];
-    NSArray* lp = [NSArray arrayWithObjects:[NSNumber numberWithDouble:_avgX],[NSNumber numberWithDouble:_avgY],[NSNumber numberWithDouble:_avgZ], nil];
-    NSArray* hp = [NSArray arrayWithObjects:[NSNumber numberWithDouble:_varX],[NSNumber numberWithDouble:_varY],[NSNumber numberWithDouble:_varZ], nil];
+    NSArray* nf = [NSArray arrayWithObjects:[NSNumber numberWithFloat:acc.x],[NSNumber numberWithFloat:acc.y],[NSNumber numberWithFloat:acc.z], nil];
+    NSArray* lp = [NSArray arrayWithObjects:[NSNumber numberWithFloat:_avgX],[NSNumber numberWithFloat:_avgY],[NSNumber numberWithFloat:_avgZ], nil];
+    NSArray* hp = [NSArray arrayWithObjects:[NSNumber numberWithFloat:_varX],[NSNumber numberWithFloat:_varY],[NSNumber numberWithFloat:_varZ], nil];
+    NSArray* accViews = [NSArray arrayWithObjects:self.xPos, self.yPos, self.zPos, nil];
     float scale = 100;
     float rotScale = 50;
     UIView *v = nil;
-    self.pitchLabel.text = [[NSNumber numberWithFloat:rot.x] stringValue];
     for (int i=0 ; i<=2 ; i++) {
-        if (rots[i] >= 0) {
-            v = rotViews[i];
+        v = rotViews[i];
+        if ([rots[i] floatValue] >= 0) {
             v.backgroundColor = [UIColor redColor];
             CGRect frame = v.frame;
-            frame.origin.y = 751 + ([rots[i] doubleValue]*rotScale);
-            frame.size.height = -[rots[i] doubleValue] * rotScale;
+            frame.origin.y = 751 + ([rots[i] floatValue]*rotScale);
+            frame.size.height = -[rots[i] floatValue] * rotScale;
             v.frame = frame;
         } else {
-            v = self.pitchPos;
             v.backgroundColor = [UIColor greenColor];
             CGRect frame = v.frame;
-            frame.size.height = [rots[i] doubleValue] * rotScale;
+            frame.size.height = [rots[i] floatValue] * rotScale;
             frame.origin.y = 751;
             v.frame = frame;
         }
@@ -128,164 +116,60 @@
     switch (_filterMode) {
         case FILTERNO:
             for (int i = 0 ; i <=2 ; i++) {
-                if (acc.x >= 0) {
-                    v = self.xPos;
+                v = accViews[i];
+                if ([nf[i] floatValue] >= 0) {
                     v.backgroundColor = [UIColor redColor];
                     CGRect frame = v.frame;
-                    frame.origin.y = 281 + (acc.x*scale);
-                    frame.size.height = -acc.x * scale;
+                    frame.origin.y = 281 + ([nf[i] floatValue]*scale);
+                    frame.size.height = -[nf[i] floatValue] * scale;
                     v.frame = frame;
                 } else {
-                    v = self.xPos;
                     v.backgroundColor = [UIColor greenColor];
                     CGRect frame = v.frame;
-                    frame.size.height = acc.x * scale;
+                    frame.size.height = [nf[i] floatValue] * scale;
                     frame.origin.y = 281;
                     v.frame = frame;
                 }
             }
         case FILTERLOW:
-            if (_avgX >= 0) {
-                v = self.xPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_avgX*scale);
-                frame.size.height = -_avgX * scale;
-                v.frame = frame;
-            } else {
-                v = self.xPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _avgX * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
-            }
-            if (_avgY >= 0) {
-                v = self.yPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_avgY*scale);
-                frame.size.height = -_avgY * scale;
-                v.frame = frame;
-            } else {
-                v = self.yPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _avgY * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
-            }
-            if (_avgZ >= 0) {
-                v = self.zPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_avgZ*scale);
-                frame.size.height = -_avgZ * scale;
-                v.frame = frame;
-            } else {
-                v = self.zPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _avgZ * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
+            for (int i = 0 ; i <= 2 ; i++) {
+                v = accViews[i];
+                if ([lp[i] floatValue] >= 0) {
+                    v.backgroundColor = [UIColor redColor];
+                    CGRect frame = v.frame;
+                    frame.origin.y = 281 + ([lp[i] floatValue]);
+                    frame.size.height = -[lp[i] floatValue] * scale;
+                    v.frame = frame;
+                } else {
+                    v.backgroundColor = [UIColor greenColor];
+                    CGRect frame = v.frame;
+                    frame.size.height = [lp[i] floatValue] * scale;
+                    frame.origin.y = 281;
+                    v.frame = frame;
+                }
             }
             break;
         case FILTERHIGH:
-            if (_varX >= 0) {
-                v = self.xPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_varX*scale);
-                frame.size.height = -_varX * scale;
-                v.frame = frame;
-            } else {
-                v = self.xPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _varX * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
-            }
-            if (_varY >= 0) {
-                v = self.yPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_varY*scale);
-                frame.size.height = -_varY * scale;
-                v.frame = frame;
-            } else {
-                v = self.yPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _varY * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
-            }
-            if (_varZ >= 0) {
-                v = self.zPos;
-                v.backgroundColor = [UIColor redColor];
-                CGRect frame = v.frame;
-                frame.origin.y = 281 + (_varZ*scale);
-                frame.size.height = -_varZ * scale;
-                v.frame = frame;
-            } else {
-                v = self.zPos;
-                v.backgroundColor = [UIColor greenColor];
-                CGRect frame = v.frame;
-                frame.size.height = _varZ * scale;
-                frame.origin.y = 281;
-                v.frame = frame;
+            for (int i = 0 ; i <= 2 ; i++) {
+                v = accViews[i];
+                if ([hp[i] floatValue] >= 0) {
+                    v.backgroundColor = [UIColor redColor];
+                    CGRect frame = v.frame;
+                    frame.origin.y = 281 + ([hp[i] floatValue]);
+                    frame.size.height = -[hp[i] floatValue] * scale;
+                    v.frame = frame;
+                } else {
+                    v.backgroundColor = [UIColor greenColor];
+                    CGRect frame = v.frame;
+                    frame.size.height = [hp[i] floatValue] * scale;
+                    frame.origin.y = 281;
+                    v.frame = frame;
+                }
             }
             break;
     }
     [self.view setNeedsDisplay];
 }
-
-/*- (void)drawRect:(CGRect)rect
-{
-    // Acceleration
-    float scale = 100;
-    NSArray *rulers = [NSArray arrayWithObjects:self.xPos, self.xNeg, self.yPos, self.yNeg, self.xPos, self.zNeg, nil];
-    CGFloat acc[3] = {_accX, _accY, _accZ};
-    for (int i = 0; i<3; i++)
-    {
-        UIView *v = [rulers objectAtIndex:i];
-        CGRect frame = v.frame;
-        if (acc[i]>=0)
-        {
-            frame.size.height = acc[i]*scale;
-            frame.origin.x = 160;
-        }
-        else
-        {
-            frame.origin.x = 160 + acc[i]*scale;
-            frame.size.height = -acc[i]*scale;
-        }
-        v.frame = frame;
-    }
-    // Rotation
-    scale = 50;
-    rulers = [NSArray arrayWithObjects:self.viewRotX, self.viewRotY, self.viewRotZ, nil];
-    CGFloat rot[] = {_rotPitch, _rotRoll, _rotYaw};
-    for (int i = 0; i<3; i++)
-    {
-        UIView *v = [rulers objectAtIndex:i];
-        CGRect frame = v.frame;
-        if (rot[i]>=0)
-        {
-            frame.size.width = rot[i]*scale;
-            frame.origin.x = 160;
-        }
-        else
-        {
-            frame.origin.x = 160 + rot[i]*scale;
-            frame.size.width = -rot[i]*scale;
-        }
-        v.frame = frame;
-    }
- 
-}*/
 
 -(void) addAcceleration: (CMAcceleration) acc{
     float alpha = 0.1;
@@ -300,7 +184,9 @@
 #pragma Peer-To-Peer Connectivity Related Methods
 - (void) prepareSession {
     MCPeerID *myPeerID = [[MCPeerID alloc] initWithDisplayName:[[UIDevice currentDevice] name]];
-    self.session = [[MCSession alloc] initWithPeer:myPeerID];
+    MCSession *temp = [[MCSession alloc] initWithPeer:myPeerID securityIdentity:nil encryptionPreference: MCEncryptionNone];
+    self.session = temp;
+    self.session.delegate = self;
 }
 
 - (void) startAdvertising {
@@ -334,13 +220,13 @@
 }
 
 - (void)session:(MCSession *)session peer:(MCPeerID *)peerID didChangeState:(MCSessionState)state {
-    NSString *str = [NSString stringWithFormat:@"Status: %@", peerID.displayName];
+    //NSString *str = [NSString stringWithFormat:@"Status: %@", peerID.displayName];
     if (state == MCSessionStateConnected) {
-        self.statusLabel.text = [str stringByAppendingString:@" connected"];
+        //[self.statusLabel setText:@"Status: Connected"];
         [self setUIToConnectedState];
         connected = YES;
     } else if (state == MCSessionStateNotConnected) {
-        self.statusLabel.text = [str stringByAppendingString:@" not connected"];
+        //[self.statusLabel setText:@"Status: Disconnected"];
         [self setUIToNotConnectedState];
         connected = NO;
     }
@@ -375,14 +261,10 @@
 - (void)setUIToNotConnectedState {
     self.disconnectButton.enabled = NO;
     self.browseButton.enabled = YES;
-    self.statusLabel.text = @"Status: Disconnected";
 }
 
 - (void)setUIToConnectedState {
     self.disconnectButton.enabled = YES;
     self.browseButton.enabled = NO;
-    self.statusLabel.text = @"Status: Connected";
 }
-
-#pragma Displaying the Motion Data Methods
 @end

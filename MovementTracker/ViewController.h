@@ -9,6 +9,7 @@
 #import <UIKit/UIKit.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import <CoreMotion/CMMotionManager.h>
+#import <GameKit/GKPublicProtocols.h>
 
 #define SERVICE_TYPE @"mt-4768"
 #define FILTERNO     0
