@@ -180,7 +180,6 @@
                         CGRect frame = v.frame;
                         frame.origin.y = 281 + ([nf[i] floatValue]*scale);
                         frame.size.height = -[nf[i] floatValue] * scale;
-                        //NSLog(@"%@", [[NSNumber numberWithFloat:[nf[i] floatValue]] stringValue]);
                         v.frame = frame;
                     });
                 } else {
@@ -189,9 +188,7 @@
                         CGRect frame = v.frame;
                         frame.size.height = [nf[i] floatValue] * scale;
                         frame.origin.y = 281;
-                        //NSLog(@"%@", [[NSNumber numberWithFloat:[nf[i] floatValue]] stringValue]);
                         v.frame = frame;
-                        //NSLog(@"Negtive");
                     });
                 }
             }
